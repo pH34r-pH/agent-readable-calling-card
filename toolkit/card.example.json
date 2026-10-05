@@ -1,0 +1,33 @@
+{
+  "version": 0,
+  "canvas": {
+    "width": 2100,
+    "height": 1200,
+    "cornerRadius": 72
+  },
+  "identity": {
+    "name": "EXAMPLE PERSON",
+    "role": "RESEARCHER · BUILDER",
+    "label": "ARCC · AGENT-READABLE CALLING CARD"
+  },
+  "recipeUrl": "https://example.com/card.md",
+  "theme": {
+    "background": "#101319",
+    "foreground": "#f4f5f7",
+    "muted": "#bfc7d5",
+    "microprint": "#d6dbe3",
+    "fontFamily": "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    "monoFamily": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+  },
+  "arc": {
+    "start": [170, 905],
+    "c1": [560, 640],
+    "c2": [1450, 640],
+    "end": [1930, 290],
+    "strokeWidth": 2,
+    "microprintSize": 17,
+    "letterSpacing": 2.4,
+    "lineOpacity": 0.35,
+    "microprintOpacity": 0.82
+  }
+}
