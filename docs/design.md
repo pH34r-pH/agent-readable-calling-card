@@ -103,3 +103,12 @@ The design target is not the smallest possible text. It is the smallest treatmen
 The human card should retain normal accessibility practices when embedded on the Web, including meaningful alt text in the surrounding page.
 
 Alt text is not part of the ARCC machine contract because it does not survive image-only transfer.
+
+
+## Microprint as a line segment
+
+The preferred ARCC treatment is no longer text merely placed beside or on top of a decorative rule.
+
+The activation text should **replace a segment of an existing line**. Behind that segment, render a bar exactly one text-height thick in a color very close to the microprint color. The result should behave perceptually as a dashed or textured continuation of the line at normal viewing size; only deliberate zoom should resolve it into letters.
+
+For the reference 2100×1200 card, the current starting point is roughly 12 px microprint (about 30% smaller than the earlier 17 px prototype), tightly tracked. This is an experimental value, not a compatibility floor. Interoperability tests must determine how far the treatment can be reduced after downscaling and lossy recompression.
