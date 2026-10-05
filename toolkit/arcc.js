@@ -22,6 +22,7 @@
       foreground: "#f4f5f7",
       muted: "#bfc7d5",
       microprint: "#d6dbe3",
+      microprintBar: "#c2c9d3",
       fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       monoFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
     },
@@ -31,10 +32,13 @@
       c2: [1450, 640],
       end: [1930, 290],
       strokeWidth: 2,
-      microprintSize: 17,
-      letterSpacing: 2.4,
+      microprintSize: 12,
+      letterSpacing: 0.35,
       lineOpacity: 0.35,
-      microprintOpacity: 0.82
+      microprintOpacity: 0.82,
+      microprintBarOpacity: 0.72,
+      microprintStartPercent: 20,
+      microprintSpanPercent: 60
     }
   });
 
@@ -138,13 +142,14 @@
       '  <title id="title">' + escapeXml(c.identity.name) + " — Agent-Readable Calling Card</title>",
       '  <desc id="desc">A human-readable calling card with an inspectable microprinted ARCC bootstrap instruction.</desc>',
       '  <rect width="' + w + '" height="' + h + '" rx="' + Number(c.canvas.cornerRadius) + '" fill="' + escapeXml(c.theme.background) + '"/>',
-      '  <defs><path id="agent-arc" d="' + path + '"/></defs>',
-      '  <path d="' + path + '" fill="none" stroke="' + escapeXml(c.theme.muted) + '" stroke-width="' + Number(c.arc.strokeWidth) + '" opacity="' + Number(c.arc.lineOpacity) + '"/>',
+      '  <defs><path id="agent-arc" d="' + path + '" pathLength="100"/></defs>',
+      '  <path d="' + path + '" pathLength="100" fill="none" stroke="' + escapeXml(c.theme.muted) + '" stroke-width="' + Number(c.arc.strokeWidth) + '" opacity="' + Number(c.arc.lineOpacity) + '"/>',
+'  <path d="' + path + '" pathLength="100" fill="none" stroke="' + escapeXml(c.theme.microprintBar) + '" stroke-width="' + Number(c.arc.microprintSize) + '" stroke-linecap="butt" stroke-dasharray="0 ' + Number(c.arc.microprintStartPercent) + ' ' + Number(c.arc.microprintSpanPercent) + ' ' + Math.max(0, 100 - Number(c.arc.microprintStartPercent) - Number(c.arc.microprintSpanPercent)) + '" opacity="' + Number(c.arc.microprintBarOpacity) + '"/>'
       '  <text x="170" y="410" fill="' + escapeXml(c.theme.foreground) + '" font-family="' + escapeXml(c.theme.fontFamily) + '" font-size="104" font-weight="600" letter-spacing="1">' + escapeXml(c.identity.name) + "</text>",
       '  <text x="176" y="505" fill="' + escapeXml(c.theme.muted) + '" font-family="' + escapeXml(c.theme.fontFamily) + '" font-size="38" letter-spacing="4">' + escapeXml(c.identity.role) + "</text>",
       '  <text x="176" y="1040" fill="' + escapeXml(c.theme.muted) + '" font-family="' + escapeXml(c.theme.fontFamily) + '" font-size="24" letter-spacing="2">' + escapeXml(c.identity.label) + "</text>",
       '  <text fill="' + escapeXml(c.theme.microprint) + '" font-family="' + escapeXml(c.theme.monoFamily) + '" font-size="' + Number(c.arc.microprintSize) + '" letter-spacing="' + Number(c.arc.letterSpacing) + '" opacity="' + Number(c.arc.microprintOpacity) + '">',
-      '    <textPath href="#agent-arc" startOffset="0%">' + bootstrap + "</textPath>",
+      '    <textPath href="#agent-arc" startOffset="' + Number(c.arc.microprintStartPercent) + '%" textLength="' + Math.round(Number(c.canvas.width) * Number(c.arc.microprintSpanPercent) / 100) + '" lengthAdjust="spacingAndGlyphs">' + bootstrap + "</textPath>",
       "  </text>",
       '  <circle cx="' + Number(c.arc.end[0]) + '" cy="' + Number(c.arc.end[1]) + '" r="7" fill="' + escapeXml(c.theme.microprint) + '" opacity="0.72"/>',
       "</svg>",
