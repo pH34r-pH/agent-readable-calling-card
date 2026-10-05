@@ -1,0 +1,29 @@
+name: toolkit
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test-render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          package-manager-cache: false
+      - name: Install renderer
+        run: npm install --no-audit --no-fund
+      - name: Unit tests
+        run: npm test
+      - name: Render reference card
+        run: npm run render
+      - name: Verify outputs
+        run: |
+          test -s dist/card.svg
+          test -s dist/card.png
