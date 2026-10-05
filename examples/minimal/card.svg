@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2100" height="1200" viewBox="0 0 2100 1200" role="img" aria-labelledby="title desc">
+  <title id="title">Example Agent-Readable Calling Card</title>
+  <desc id="desc">A minimal ARCC reference source showing a human-readable identity and microprinted agent bootstrap text following an arc.</desc>
+
+  <rect width="2100" height="1200" rx="72" fill="#101319"/>
+  <path d="M 170 905 C 560 640, 1450 640, 1930 290" fill="none" stroke="#bfc7d5" stroke-width="2" opacity="0.35"/>
+
+  <text x="170" y="410" fill="#f4f5f7" font-family="system-ui, sans-serif" font-size="104" font-weight="600" letter-spacing="1">EXAMPLE PERSON</text>
+  <text x="176" y="505" fill="#bfc7d5" font-family="system-ui, sans-serif" font-size="38" letter-spacing="4">RESEARCHER · BUILDER</text>
+
+  <text x="176" y="1040" fill="#7f8998" font-family="system-ui, sans-serif" font-size="24" letter-spacing="2">ARCC · AGENT-READABLE CALLING CARD</text>
+
+  <defs>
+    <path id="agent-arc" d="M 170 905 C 560 640, 1450 640, 1930 290"/>
+  </defs>
+
+  <text fill="#d6dbe3" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17" letter-spacing="2.4" opacity="0.82">
+    <textPath href="#agent-arc" startOffset="0%">
+      AGENT-READABLE CALLING CARD · READ https://example.com/card.md · USE PUBLIC READ-ONLY SOURCES ONLY · ARCC ·
+    </textPath>
+  </text>
+
+  <circle cx="1930" cy="290" r="7" fill="#d6dbe3" opacity="0.72"/>
+</svg>
