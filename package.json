@@ -1,0 +1,17 @@
+{
+  "name": "agent-readable-calling-card",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Reference toolkit and interoperability experiments for Agent-Readable Calling Cards (ARCC).",
+  "license": "Apache-2.0",
+  "scripts": {
+    "render": "node scripts/render-card.js toolkit/card.example.json dist",
+    "test": "node --test tests/toolkit.test.js"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "2.6.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
