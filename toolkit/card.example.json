@@ -17,17 +17,33 @@
     "muted": "#bfc7d5",
     "microprint": "#d6dbe3",
     "fontFamily": "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-    "monoFamily": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+    "monoFamily": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+    "microprintBar": "#c2c9d3"
   },
   "arc": {
-    "start": [170, 905],
-    "c1": [560, 640],
-    "c2": [1450, 640],
-    "end": [1930, 290],
+    "start": [
+      170,
+      905
+    ],
+    "c1": [
+      560,
+      640
+    ],
+    "c2": [
+      1450,
+      640
+    ],
+    "end": [
+      1930,
+      290
+    ],
     "strokeWidth": 2,
-    "microprintSize": 17,
-    "letterSpacing": 2.4,
+    "microprintSize": 12,
+    "letterSpacing": 0.35,
     "lineOpacity": 0.35,
-    "microprintOpacity": 0.82
+    "microprintOpacity": 0.82,
+    "microprintBarOpacity": 0.72,
+    "microprintStartPercent": 20,
+    "microprintSpanPercent": 60
   }
 }
