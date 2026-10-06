@@ -8,6 +8,15 @@ test("default configuration is valid", () => {
   assert.deepEqual(result.errors, []);
 });
 
+test("canonical typography uses only the pinned font families", () => {
+  assert.deepEqual(ARCC.FONT_FAMILIES, {
+    sans: "DejaVu Sans",
+    mono: "DejaVu Sans Mono"
+  });
+  assert.equal(ARCC.validateConfig({ theme: { fontFamily: "system-ui" } }).valid, false);
+  assert.equal(ARCC.validateConfig({ theme: { monoFamily: "monospace" } }).valid, false);
+});
+
 test("renderer is deterministic for the same configuration", () => {
   const a = ARCC.renderSvg(ARCC.DEFAULT_CONFIG);
   const b = ARCC.renderSvg(ARCC.DEFAULT_CONFIG);

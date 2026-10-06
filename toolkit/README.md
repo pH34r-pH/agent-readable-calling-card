@@ -25,18 +25,19 @@ The studio lets you:
 - download the editable SVG;
 - download a convenience PNG render.
 
-The browser PNG is for convenience. For reproducible canonical output, use the CLI renderer.
+The browser preview resolves the named families through the browser and any fonts installed on that machine, so its appearance can differ slightly. The browser PNG is for convenience. For reproducible canonical output, use the CLI renderer; it uses the pinned package fonts and does not inspect local system fonts.
 
 ## Canonical rendering
 
 With Node.js installed:
 
 ```sh
-npm install
+npm ci
+npm test
 npm run render
 ```
 
-This renders `toolkit/card.example.json` into `dist/card.svg` and `dist/card.png`.
+This renders `toolkit/card.example.json` into `dist/card.svg`, `dist/card.png`, and `dist/card.manifest.json`. The canonical PNG uses the pinned DejaVu Sans and DejaVu Sans Mono TrueType files from `dejavu-fonts-ttf@2.37.3`. The renderer passes only those files to `resvg-js` and disables system-font loading. The manifest records the renderer version, font package and license provenance, per-file font hashes, configuration hash, and output hashes.
 
 Render another config:
 
@@ -44,7 +45,7 @@ Render another config:
 node scripts/render-card.js path/to/card.json dist
 ```
 
-PNG output uses `@resvg/resvg-js`.
+PNG output uses `@resvg/resvg-js`. The font package contains the DejaVu font files and their license. The DejaVu fonts are based on Bitstream Vera; the package includes the Bitstream Vera and Arev license notices, with DejaVu changes in the public domain. No font binaries are copied into this repository.
 
 ## Design with an agent
 

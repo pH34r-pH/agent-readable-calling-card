@@ -18,7 +18,7 @@ jobs:
           node-version: "22"
           package-manager-cache: false
       - name: Install renderer
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Unit tests
         run: npm test
       - name: Render reference card
@@ -27,3 +27,4 @@ jobs:
         run: |
           test -s dist/card.svg
           test -s dist/card.png
+          sha256sum dist/card.png

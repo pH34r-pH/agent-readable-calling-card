@@ -236,7 +236,7 @@
     <div class="card-shell"><div id="card"></div></div>
     <p class="preview-note">
       This is a convenience preview. <strong>The SVG/config are the editable source.</strong>
-      Browser PNG export is useful for casual use; the repository's <code>resvg</code>-based renderer is the reproducible canonical export path.
+      The browser resolves the named font families locally, while the repository's <code>resvg</code>-based CLI loads pinned font files and disables system-font lookup for canonical PNG output. Browser PNG export is for casual use; CLI output includes a provenance manifest.
     </p>
   </section>
 </main>

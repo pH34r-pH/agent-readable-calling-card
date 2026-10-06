@@ -16,8 +16,8 @@
     "foreground": "#f4f5f7",
     "muted": "#bfc7d5",
     "microprint": "#d6dbe3",
-    "fontFamily": "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-    "monoFamily": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+    "fontFamily": "DejaVu Sans",
+    "monoFamily": "DejaVu Sans Mono"
   },
   "arc": {
     "start": [170, 905],
