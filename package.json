@@ -6,10 +6,11 @@
   "license": "Apache-2.0",
   "scripts": {
     "render": "node scripts/render-card.js toolkit/card.example.json dist",
-    "test": "node --test tests/toolkit.test.js"
+    "test": "node --test tests/toolkit.test.js tests/render-card.test.js"
   },
   "devDependencies": {
-    "@resvg/resvg-js": "2.6.2"
+    "@resvg/resvg-js": "2.6.2",
+    "dejavu-fonts-ttf": "2.37.3"
   },
   "engines": {
     "node": ">=18"

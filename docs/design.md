@@ -85,6 +85,8 @@ The richer profile belongs in the resolved recipe.
 
 The reference implementation should test several effective microprint sizes instead of choosing one by intuition.
 
+The canonical renderer uses the pinned DejaVu Sans and DejaVu Sans Mono TrueType files from `dejavu-fonts-ttf@2.37.3`. It loads only those font files and disables system-font lookup; the generated manifest records their package, license, and file hashes. The browser Studio remains a convenience preview and resolves these family names through the browser's local font environment.
+
 Variables to measure include:
 
 - raster dimensions;

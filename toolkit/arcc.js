@@ -8,6 +8,11 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
+  const FONT_FAMILIES = Object.freeze({
+    sans: "DejaVu Sans",
+    mono: "DejaVu Sans Mono"
+  });
+
   const DEFAULT_CONFIG = Object.freeze({
     version: 0,
     canvas: { width: 2100, height: 1200, cornerRadius: 72 },
@@ -22,8 +27,8 @@
       foreground: "#f4f5f7",
       muted: "#bfc7d5",
       microprint: "#d6dbe3",
-      fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-      monoFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+      fontFamily: FONT_FAMILIES.sans,
+      monoFamily: FONT_FAMILIES.mono
     },
     arc: {
       start: [170, 905],
@@ -86,6 +91,12 @@
     if (!c.identity.name || !String(c.identity.name).trim()) errors.push("identity.name is required");
     if (!c.identity.role || !String(c.identity.role).trim()) errors.push("identity.role is required");
     if (!isHttpsUrl(c.recipeUrl)) errors.push("recipeUrl must be an absolute HTTPS URL");
+    if (c.theme.fontFamily !== FONT_FAMILIES.sans) {
+      errors.push('theme.fontFamily must be "' + FONT_FAMILIES.sans + '" for canonical rendering');
+    }
+    if (c.theme.monoFamily !== FONT_FAMILIES.mono) {
+      errors.push('theme.monoFamily must be "' + FONT_FAMILIES.mono + '" for canonical rendering');
+    }
 
     for (const key of ["width", "height"]) {
       if (!Number.isFinite(Number(c.canvas[key])) || Number(c.canvas[key]) <= 0) {
@@ -153,6 +164,7 @@
   }
 
   return {
+    FONT_FAMILIES,
     DEFAULT_CONFIG,
     clone,
     mergeDeep,

@@ -69,11 +69,11 @@ It can export reusable JSON configuration, editable SVG, and a convenience PNG.
 With Node.js installed:
 
 ```sh
-npm install
+npm ci
 npm run render
 ```
 
-The reference renderer uses SVG as the source of truth and `resvg-js` for the canonical PNG path.
+The reference renderer uses SVG as the source of truth and `resvg-js` for the canonical PNG path. It loads pinned DejaVu Sans and DejaVu Sans Mono TrueType files from `dejavu-fonts-ttf@2.37.3`, with system-font lookup disabled, and writes a manifest containing font/license provenance and SHA-256 hashes.
 
 ### Design with an AI agent
 
