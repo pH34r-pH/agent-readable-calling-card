@@ -145,6 +145,10 @@ The bootstrap is **not** a hidden prompt. ARCC favors subtle-but-inspectable typ
 
 The hosted recipe is a static Markdown document. It identifies the subject, lists authoritative public sources, gives retrieval constraints, and defines how an assistant should present the resulting profile.
 
+Serve the canonical recipe as inline UTF-8 text over HTTPS; do not require browser download handling. An extensionless compatibility route such as `/card` may resolve to the same recipe as `/card.md`.
+
+For public Web discovery, use ordinary standards first: an RFC 9309 `robots.txt` that does not block the retrieval agents you intend to support. An optional `/llms.txt` can advertise the canonical recipe to tools that implement that emerging convention. ARCC does not require a hosted agent or an A2A/MCP capability manifest.
+
 See [`templates/card.md`](templates/card.md).
 
 ## Design principles
@@ -174,7 +178,7 @@ A successful ARCC implementation should continue to work, as far as practical, a
 - messaging-app recompression,
 - JPEG conversion.
 
-The initial test plan is documented in [`tests/interoperability.md`](tests/interoperability.md).
+The initial test plan is documented in [`tests/interoperability.md`](tests/interoperability.md). It now scores visual bootstrap recovery separately from hosted Web resolution: a URL can be correctly recovered from the pixels yet remain unavailable through a particular assistant's search/open-page infrastructure.
 
 ## Status
 
