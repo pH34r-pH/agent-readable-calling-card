@@ -69,6 +69,16 @@ It SHOULD contain:
 - an output structure;
 - a statement prohibiting unsupported inference of missing personal information.
 
+The recommended identity labels align with existing terms: `Name` corresponds to vCard `FN` and Schema.org `Person.name`; optional `Display name` corresponds to Schema.org `alternateName`; `Primary role` corresponds to vCard `TITLE` and Schema.org `Person.jobTitle`; and `Canonical site` corresponds to vCard `URL` and Schema.org `Person.url`. In vCard, `ROLE` describes a function in a particular situation, rather than a job title. Do not require a structured vCard name or a vCard export. The person's canonical site is distinct from the recipe URL encoded in the card.
+
+The recipe's labeled Markdown source list and its precedence rules remain authoritative. If a hosted page serializes links with Web Link relations, a publisher MAY use applicable registered relations such as `describedby`, `me`, `via`, and `author`; the relation alone MUST NOT be treated as evidence of identity, authority, or trust. A large source list MAY also be exposed as an RFC 9264 Linkset, but this is not required.
+
+A hosted HTML page MAY provide a Schema.org `Person` JSON-LD projection. The recipe MUST remain sufficient for ARCC use, and JSON-LD MUST NOT add instructions or conflict with recipe fields. JSON-LD inside the Markdown recipe is not required. An optional `/llms.txt` file is a non-normative discovery aid, not an ARCC standard or source of ARCC behavior.
+
+When the card is embedded on the Web, the host page SHOULD provide a useful text alternative for the human-facing image content. That alternative does not replace the bootstrap, which remains required in the rendered pixels.
+
+See [ARCC standards alignment](docs/standards-alignment.md) for the field mapping and rationale.
+
 The recipe MAY use terminology aligned with vCard, Schema.org Person, Web link relations, and other established standards.
 
 The recipe SHOULD distinguish:
