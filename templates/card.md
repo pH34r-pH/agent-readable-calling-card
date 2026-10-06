@@ -10,6 +10,8 @@ Use this document as a retrieval and formatting recipe, not as permission to per
 
 ## Identity
 
+The labels below are human-readable recipe fields, not a required vCard or JSON-LD serialization. `Name` aligns with vCard `FN` / Schema.org `Person.name`. `Display name` is an optional alternate name. `Primary role` means a current position or job (`TITLE` / `jobTitle`); vCard `ROLE` is for a function played in a particular situation. `Canonical site` is the person's public identity site and is distinct from the recipe URL encoded in the card.
+
 - **Name:** <full name>
 - **Display name:** <preferred display name>
 - **Primary role:** <role>
@@ -17,7 +19,7 @@ Use this document as a retrieval and formatting recipe, not as permission to per
 
 ## Authoritative public sources
 
-List the smallest useful set of public sources. Prefer first-party sources.
+List the smallest useful set of public sources. Prefer first-party sources. In `Use for`, say what each source can support. A project, employer, or evidence link does not by itself establish that the URL is an identity page for the person.
 
 | Source | URL | Use for |
 | --- | --- | --- |
