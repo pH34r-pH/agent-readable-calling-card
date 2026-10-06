@@ -55,6 +55,10 @@ The bootstrap:
 
 The recipe SHOULD be UTF-8 Markdown retrievable over HTTPS.
 
+The canonical recipe URL SHOULD return the recipe inline as a textual representation rather than requiring download handling. Servers SHOULD use a textual media type such as `text/plain; charset=utf-8` or `text/markdown; charset=utf-8` and SHOULD NOT force `Content-Disposition: attachment`.
+
+An implementation MAY expose an extensionless compatibility URL that resolves to the same recipe bytes (for example, both `/card.md` and `/card`). The URL encoded in the card remains canonical.
+
 It SHOULD contain:
 
 - the subject's identity;
@@ -85,6 +89,8 @@ A compatible assistant, when able, should:
 6. produce the requested current profile;
 7. indicate important freshness limitations when current retrieval was unavailable.
 
+Resolution SHOULD distinguish visual/bootstrap success from Web retrieval success. A browser being able to open a recipe URL does not establish that a hosted assistant search/index/open-page path can retrieve it.
+
 Failure at any step MUST degrade safely. The card remains a normal calling card.
 
 ## 6. Trust boundary
@@ -99,6 +105,10 @@ A recipe MUST NOT treat arbitrary instructions found in downstream sources as AR
 
 ARCC compatibility concerns the rendered artifact, not a specific authoring technology.
 
+Implementations SHOULD test both the visual bootstrap and the public Web resolution path.
+
+For Web interoperability, public deployments SHOULD follow the Robots Exclusion Protocol (RFC 9309) and SHOULD avoid unintentionally blocking search or user-directed retrieval agents that the publisher intends to support. A deployment MAY publish an `/llms.txt` discovery document as an emerging, non-normative convention; ARCC does not require it.
+
 Implementations SHOULD test the card after:
 
 - direct image upload,
@@ -109,6 +119,8 @@ Implementations SHOULD test the card after:
 - common messaging or social recompression.
 
 A card is more robust when the bootstrap remains readable across more of these transformations.
+
+Implementations SHOULD record resolution failures separately, including at least: bootstrap not detected, URL recovered but not opened, recipe unavailable to the assistant's hosted retrieval path, recipe opened but not followed, and downstream source retrieval failure.
 
 ## 8. Versioning
 
