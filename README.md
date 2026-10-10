@@ -1,5 +1,7 @@
 # ARCC — Agent-Readable Calling Card
 
+![ARCC — A calling card that connects people and agents.](docs/assets/hero.png)
+
 **A calling card that follows the arc of your career.**
 
 ARCC is an open pattern for business cards that work at two scales:
