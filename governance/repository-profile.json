@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "profile_id": "https://ph34r.dev/ns/long-haul/repository-alignment/v1",
+  "repository": "pH34r-pH/agent-readable-calling-card",
+  "repository_profile": "publication-distribution",
+  "status": "active",
+  "authority": {
+    "source_of_truth": "Reviewed static card source, exact recipe and transformation identities, reproducible rendered artifacts, and public release manifests.",
+    "task_authority": "GitHub issues and recipe specifications with source, transformation, redirect, and disclosure acceptance criteria.",
+    "acceptance_authority": "Deterministic rendering, source identity checks, transformation hashes, adversarial recipe fixtures, and reviewed public output.",
+    "deployment_authority": "Static publication workflow only; recipe content and model output cannot authorize external actions."
+  },
+  "data": {
+    "default_class": "public",
+    "external_content_is_untrusted": true,
+    "contains_personal_data": false,
+    "contains_secrets": false,
+    "retention": "Public recipes, source identities, transformations, rendered artifacts, and release manifests remain versioned.",
+    "deletion": "Compromised, stale, or rights-incompatible sources and recipes are revoked or superseded and removed from active publication.",
+    "secret_storage": "No credentials or private source data belong in the static repository."
+  },
+  "resource_policy": {
+    "conforms_to": "https://ph34r.dev/ns/long-haul/resource-policy/v1",
+    "actions": {
+      "read": "allow",
+      "index": "allow",
+      "search": "allow",
+      "ai_augment": "allow",
+      "evaluate": "allow",
+      "data_mining": "allow",
+      "ai_training": "review",
+      "generative_ai_training": "review",
+      "derive": "allow",
+      "annotate": "allow",
+      "distribute": "allow",
+      "publish": "review",
+      "retain": "allow",
+      "delete": "review"
+    }
+  },
+  "change_control": {
+    "independent_acceptance": true,
+    "candidate_before_promotion": true,
+    "production_promotion": "protected",
+    "rollback_or_revocation": "Published cards, recipes, redirects, and transformation outputs are replaceable and independently revocable by exact release identity.",
+    "negative_results_retained": true
+  },
+  "evidence": {
+    "exact_source_identity": true,
+    "artifact_fingerprints": true,
+    "provenance_receipts": true
+  },
+  "boundaries": {
+    "external_text_cannot_grant_authority": true,
+    "model_output_cannot_self_approve": true,
+    "deployment_separate_from_acceptance": true
+  },
+  "stabilization": [
+    {
+      "id": "adversarial-recipe-fixtures",
+      "priority": "P0",
+      "status": "planned",
+      "summary": "Add malicious recipe, redirect, source-poisoning, prompt-injection, path, and transformation fixtures."
+    },
+    {
+      "id": "signed-versioned-recipe-manifest",
+      "priority": "P0",
+      "status": "planned",
+      "summary": "Bind recipe, source, renderer, transformation, redirect, freshness, expiry, and artifact identity in one signed or attested manifest."
+    },
+    {
+      "id": "transformation-evidence-matrix",
+      "priority": "P1",
+      "status": "planned",
+      "summary": "Separate pixel recovery, Web resolution, factual synthesis, and model-assisted transformation evidence."
+    }
+  ]
+}
