@@ -12,6 +12,8 @@
     sans: "DejaVu Sans",
     mono: "DejaVu Sans Mono"
   });
+  const MAX_CONFIG_BYTES = 32 * 1024;
+  const MAX_CANVAS_DIMENSION = 4096;
 
   const DEFAULT_CONFIG = Object.freeze({
     version: 0,
@@ -47,21 +49,29 @@
     return JSON.parse(JSON.stringify(value));
   }
 
-  function mergeDeep(base, extra) {
+  function isRecord(value) {
+    return value !== null && typeof value === "object" &&
+      Object.getPrototypeOf(value) === Object.prototype;
+  }
+
+  function mergeDeep(base, extra = {}, parent = "", errors = []) {
     const output = clone(base);
-    for (const [key, value] of Object.entries(extra || {})) {
-      if (
-        value &&
-        typeof value === "object" &&
-        !Array.isArray(value) &&
-        output[key] &&
-        typeof output[key] === "object" &&
-        !Array.isArray(output[key])
-      ) {
-        output[key] = mergeDeep(output[key], value);
+    if (!isRecord(extra)) {
+      errors.push((parent || "config") + " must be a JSON object");
+      return output;
+    }
+    for (const key of Object.keys(base)) {
+      if (!Object.hasOwn(extra, key)) continue;
+      const value = extra[key];
+      if (isRecord(base[key])) {
+        const field = parent ? parent + "." + key : key;
+        output[key] = mergeDeep(base[key], value, field, errors);
       } else {
         output[key] = value;
       }
+    }
+    if (Object.keys(extra).some(key => !Object.hasOwn(base, key))) {
+      errors.push((parent || "config") + " contains an unsupported field");
     }
     return output;
   }
@@ -76,20 +86,34 @@
   }
 
   function isHttpsUrl(value) {
+    if (typeof value !== "string" || value.length > 2048 ||
+        !/^https:\/\/[^/\s\\\u0000-\u001f\u007f][^\s\\\u0000-\u001f\u007f]*$/u.test(value)) return false;
     try {
       const url = new URL(value);
-      return url.protocol === "https:";
+      return url.protocol === "https:" && Boolean(url.hostname) &&
+        !url.username && !url.password && !url.hash;
     } catch {
       return false;
     }
   }
 
-  function validateConfig(input) {
-    const c = mergeDeep(DEFAULT_CONFIG, input || {});
-    const errors = [];
+  function numberInRange(value, minimum, maximum) {
+    return typeof value === "number" && Number.isFinite(value) &&
+      value >= minimum && value <= maximum;
+  }
 
-    if (!c.identity.name || !String(c.identity.name).trim()) errors.push("identity.name is required");
-    if (!c.identity.role || !String(c.identity.role).trim()) errors.push("identity.role is required");
+  function validateConfig(input) {
+    const errors = [];
+    const c = mergeDeep(DEFAULT_CONFIG, input, "", errors);
+
+    if (c.version !== 0) errors.push("version must be 0");
+    for (const key of ["name", "role", "label"]) {
+      const value = c.identity[key];
+      if (typeof value !== "string" || (key !== "label" && !value.trim()) ||
+          value.length > 256 || /[\u0000-\u001f\u007f]/u.test(value)) {
+        errors.push("identity." + key + " must be bounded, single-line text");
+      }
+    }
     if (!isHttpsUrl(c.recipeUrl)) errors.push("recipeUrl must be an absolute HTTPS URL");
     if (c.theme.fontFamily !== FONT_FAMILIES.sans) {
       errors.push('theme.fontFamily must be "' + FONT_FAMILIES.sans + '" for canonical rendering');
@@ -98,20 +122,38 @@
       errors.push('theme.monoFamily must be "' + FONT_FAMILIES.mono + '" for canonical rendering');
     }
 
+    for (const key of ["background", "foreground", "muted", "microprint"]) {
+      const color = c.theme[key];
+      if (typeof color !== "string" || !/^#(?:[\da-f]{3,4}|[\da-f]{6}|[\da-f]{8})$/iu.test(color)) {
+        errors.push("theme." + key + " must be a hexadecimal color");
+      }
+    }
     for (const key of ["width", "height"]) {
-      if (!Number.isFinite(Number(c.canvas[key])) || Number(c.canvas[key]) <= 0) {
-        errors.push("canvas." + key + " must be a positive number");
+      const minimum = DEFAULT_CONFIG.canvas[key];
+      if (!Number.isInteger(c.canvas[key]) || !numberInRange(c.canvas[key], minimum, MAX_CANVAS_DIMENSION)) {
+        errors.push("canvas." + key + " must be an integer between " + minimum + " and " + MAX_CANVAS_DIMENSION);
       }
     }
-
+    const width = numberInRange(c.canvas.width, DEFAULT_CONFIG.canvas.width, MAX_CANVAS_DIMENSION)
+      ? c.canvas.width : DEFAULT_CONFIG.canvas.width;
+    const height = numberInRange(c.canvas.height, DEFAULT_CONFIG.canvas.height, MAX_CANVAS_DIMENSION)
+      ? c.canvas.height : DEFAULT_CONFIG.canvas.height;
+    if (!numberInRange(c.canvas.cornerRadius, 0, Math.min(width, height) / 2)) {
+      errors.push("canvas.cornerRadius is out of range");
+    }
     for (const point of ["start", "c1", "c2", "end"]) {
-      if (!Array.isArray(c.arc[point]) || c.arc[point].length !== 2 || c.arc[point].some(v => !Number.isFinite(Number(v)))) {
-        errors.push("arc." + point + " must be [x, y]");
+      const value = c.arc[point];
+      if (!Array.isArray(value) || value.length !== 2 ||
+          !numberInRange(value[0], 0, width) || !numberInRange(value[1], 0, height)) {
+        errors.push("arc." + point + " must contain two numeric coordinates inside the canvas");
       }
     }
-
-    if (!Number.isFinite(Number(c.arc.microprintSize)) || Number(c.arc.microprintSize) <= 0) {
-      errors.push("arc.microprintSize must be a positive number");
+    const ranges = {
+      microprintSize: [1, 256], strokeWidth: [0, 256], letterSpacing: [-64, 256],
+      lineOpacity: [0, 1], microprintOpacity: [0, 1]
+    };
+    for (const [key, [minimum, maximum]] of Object.entries(ranges)) {
+      if (!numberInRange(c.arc[key], minimum, maximum)) errors.push("arc." + key + " is out of range");
     }
 
     return { valid: errors.length === 0, errors, config: c };
@@ -165,9 +207,11 @@
 
   return {
     FONT_FAMILIES,
+    MAX_CONFIG_BYTES,
     DEFAULT_CONFIG,
     clone,
     mergeDeep,
+    isHttpsUrl,
     validateConfig,
     bootstrapText,
     renderSvg

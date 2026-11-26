@@ -27,6 +27,11 @@ The studio lets you:
 
 The browser preview resolves the named families through the browser and any fonts installed on that machine, so its appearance can differ slightly. The browser PNG is for convenience. For reproducible canonical output, use the CLI renderer; it uses the pinned package fonts and does not inspect local system fonts.
 
+The starter layout uses fixed artwork coordinates. The configuration accepts
+canvases from 2100 × 1200 up to 4096 × 4096 pixels and requires arc control points
+inside the canvas. JSON imports are capped at 32 KiB and colors use hexadecimal
+notation. The recipe URL must use HTTPS with no credentials or fragment.
+
 ## Canonical rendering
 
 With Node.js installed:
@@ -38,6 +43,9 @@ npm run render
 ```
 
 This renders `toolkit/card.example.json` into `dist/card.svg`, `dist/card.png`, and `dist/card.manifest.json`. The canonical PNG uses the pinned DejaVu Sans and DejaVu Sans Mono TrueType files from `dejavu-fonts-ttf@2.37.3`. The renderer passes only those files to `resvg-js` and disables system-font loading. The manifest records the renderer version, font package and license provenance, per-file font hashes, configuration hash, and output hashes.
+
+For publication, collect those files with the reviewed recipe and use
+[signed release verification](../docs/release-verification.md).
 
 Render another config:
 

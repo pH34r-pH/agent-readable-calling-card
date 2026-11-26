@@ -59,3 +59,15 @@ test("canonical renders are byte-stable and record pinned font provenance", () =
     fs.rmSync(temporaryRoot, { recursive: true, force: true });
   }
 });
+
+test("oversized config is rejected before output is created", t => {
+  const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "arcc-config-test-"));
+  t.after(() => fs.rmSync(temporaryRoot, { recursive: true, force: true }));
+  const input = path.join(temporaryRoot, "oversized.json");
+  const output = path.join(temporaryRoot, "output");
+  fs.writeFileSync(input, Buffer.alloc(32 * 1024 + 1, " "));
+  const result = spawnSync(process.execPath, [rendererPath, input, output], { encoding: "utf8" });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /size limit/);
+  assert.equal(fs.existsSync(output), false);
+});

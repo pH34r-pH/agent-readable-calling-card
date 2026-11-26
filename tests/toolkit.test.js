@@ -37,10 +37,33 @@ test("unsafe or ambiguous recipe URL is rejected", () => {
     "http://example.org/card.md",
     "javascript:alert(1)",
     "/card.md",
-    "not a url"
+    "not a url",
+    "https:example.org/card.md",
+    "https://reader@example.org/card.md",
+    "https://example.org/card.md#section"
   ]) {
     const result = ARCC.validateConfig({ recipeUrl });
     assert.equal(result.valid, false, recipeUrl);
+  }
+});
+
+test("untrusted config cannot extend the schema or pass nonnumeric geometry", () => {
+  for (const config of [
+    null,
+    { version: 1 },
+    { canvas: { width: 4097 } },
+    { canvas: { height: 1000 } },
+    { canvas: { height: "1200" } },
+    { arc: { end: ["1930", 290] } },
+    { arc: { end: [4100, 290] } },
+    { arc: { lineOpacity: 2 } },
+    { theme: { foreground: "external-asset" } },
+    { identity: { name: "Text\nInstructions" } },
+    { transformation: { kind: "factual-recovery" } },
+    { identity: { role: "Builder", unsupported: true } }
+  ]) {
+    assert.equal(ARCC.validateConfig(config).valid, false, JSON.stringify(config));
+    assert.throws(() => ARCC.renderSvg(config), /Invalid ARCC config/);
   }
 });
 
