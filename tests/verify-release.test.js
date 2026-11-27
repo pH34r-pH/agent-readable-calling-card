@@ -9,6 +9,7 @@ const { spawnSync } = require("node:child_process");
 const { renderCard, sha256 } = require("../scripts/render-card.js");
 const { stageRelease } = require("../scripts/stage-release.js");
 const { verifyRelease } = require("../scripts/verify-release.js");
+const { verifyWebRelease } = require("../scripts/verify-web-release.js");
 
 const REVISION = "a".repeat(40);
 const NOW = Date.parse("2026-11-25T20:00:00.000Z");
@@ -74,6 +75,125 @@ test("verified release reproduces both render artifacts and commits exact recipe
   manifest.recipe.redirectTarget = "https://example.org/canonical/card.md";
   sign();
   assert.equal(verifyRelease(root, publicKey, REVISION, NOW).sourceRevision, REVISION);
+});
+
+test("Web verification observes only the pinned recipe and records exact inline text", async t => {
+  const { root, manifest, sign } = stagedRelease(t);
+  const bundleDigest = sha256(sign());
+  const recipe = fs.readFileSync(path.join(root, "card.md"));
+  const requests = [];
+  const result = await verifyWebRelease(root, publicKey, REVISION, bundleDigest, "https://example.org", {
+    clock: () => NOW,
+    request: async (url, options) => {
+      requests.push(url);
+      assert.equal(options.redirect, "manual");
+      assert.equal(options.credentials, "omit");
+      return new Response(recipe, { headers: {
+        "Content-Type": 'text/markdown; charset="UTF-8"; variant=GFM',
+        "Content-Disposition": 'inline; filename="card, recipe.md"'
+      } });
+    }
+  });
+  assert.deepEqual(requests, [recipeUrl]);
+  assert.deepEqual(result, {
+    sourceRevision: REVISION,
+    manifestSha256: bundleDigest,
+    webEvidence: {
+      transformation: "web-resolution", result: "byte-match", checkedAt: new Date(NOW).toISOString(),
+      recipeUrl, redirectTarget: null, redirectStatus: null, status: 200, recipeSha256: manifest.recipe.sha256,
+      mediaType: "text/markdown", contentDisposition: "inline", bytes: recipe.length
+    }
+  });
+});
+
+test("Web verification follows only the signed single redirect", async t => {
+  const { root, manifest, sign } = stagedRelease(t);
+  const target = "https://example.org/canonical/card.md";
+  manifest.recipe.redirectTarget = target;
+  const approved = sha256(sign());
+  const recipe = fs.readFileSync(path.join(root, "card.md"));
+  const cases = [
+    ["/canonical/card.md", null, [recipeUrl, target]],
+    ["https://example.net/card.md", /does not match/, [recipeUrl]],
+    ["http://example.org/canonical/card.md", /does not match/, [recipeUrl]],
+    ["/other.md", /does not match/, [recipeUrl]],
+    [null, /does not match/, [recipeUrl]]
+  ];
+  for (const [location, error, urls] of cases) {
+    const seen = [];
+    const verification = verifyWebRelease(root, publicKey, REVISION, approved, "https://example.org", {
+      clock: () => NOW,
+      request: async url => {
+        seen.push(url);
+        return url === recipeUrl
+          ? new Response(null, { status: 302, headers: location === null ? {} : { location } })
+          : new Response(recipe, { headers: { "Content-Type": "text/plain" } });
+      }
+    });
+    if (error) {
+      await assert.rejects(verification, error);
+    } else {
+      const { webEvidence } = await verification;
+      assert.equal(webEvidence.redirectStatus, 302);
+      assert.equal(webEvidence.redirectTarget, target);
+    }
+    assert.deepEqual(seen, urls);
+  }
+  const unexpected = verifyWebRelease(root, publicKey, REVISION, approved, "https://example.org", {
+    clock: () => NOW,
+    request: async url => new Response(null, {
+      status: 302, headers: { location: url === recipeUrl ? target : "/chain/card.md" }
+    })
+  });
+  await assert.rejects(unexpected, /HTTP 200/);
+});
+
+test("Web verification rejects unreviewed origin and release before making a request", async t => {
+  const { root, sign } = stagedRelease(t);
+  const approved = sha256(sign());
+  const options = {
+    clock: () => NOW,
+    request: async () => assert.fail("an unreviewed release cannot make a request")
+  };
+  await assert.rejects(
+    verifyWebRelease(root, publicKey, REVISION, "0".repeat(64), "https://example.org", options),
+    /approved manifest digest/
+  );
+  await assert.rejects(
+    verifyWebRelease(root, publicKey, REVISION, approved, "https://example.net", options),
+    /approved deployment origin/
+  );
+});
+
+test("Web verification rejects HTML, attachment, wrong encoding, stale review, and mismatched bytes", async t => {
+  const { root, manifest, write, sign } = stagedRelease(t);
+  const approved = sha256(sign());
+  const recipe = fs.readFileSync(path.join(root, "card.md"));
+  const plain = { "Content-Type": "text/plain; charset=utf-8" };
+  const options = [
+    [recipe, { "Content-Type": "text/html" }, /inline text/],
+    [recipe, { "Content-Type": "text/plain; variant=GFM, text/html" }, /inline text/],
+    [recipe, { ...plain, "Content-Disposition": "attachment" }, /require a download/],
+    [recipe, { ...plain, "Content-Disposition": 'inline; filename="card.md", attachment' }, /require a download/],
+    [recipe, { "Content-Type": "text/plain; charset=iso-8859-1" }, /must use UTF-8/],
+    [recipe, plain, /validity window/, Date.parse(manifest.expiresAt)],
+    [Buffer.from("Replaced recipe"), plain, /digest does not match/],
+    [Buffer.alloc(256 * 1024 + 1), plain, /exceeds its size limit/]
+  ];
+  for (const [bytes, headers, error, checkedAt = NOW] of options) {
+    const times = [NOW, checkedAt];
+    await assert.rejects(verifyWebRelease(root, publicKey, REVISION, approved, "https://example.org", {
+      clock: () => times.shift(),
+      request: async () => new Response(bytes, { headers })
+    }), error);
+  }
+  const binary = Buffer.from([0xff, 0xfe]);
+  write("card.md", binary);
+  manifest.recipe.sha256 = sha256(binary);
+  await assert.rejects(verifyWebRelease(root, publicKey, REVISION, sha256(sign()), "https://example.org", {
+    clock: () => NOW,
+    request: async () => new Response(binary, { headers: plain })
+  }), /not valid UTF-8/);
 });
 
 test("CLI reports the release digest and can record byte-for-byte layout evidence", t => {

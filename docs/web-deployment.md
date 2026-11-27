@@ -53,7 +53,9 @@ In particular, ARCC does not by itself justify publishing an A2A Agent Card, MCP
 ## Verification
 
 Use the [signed release bundle procedure](release-verification.md) to verify the
-reviewed recipe, sources, and render artifacts before promoting a card.
+reviewed recipe, sources, and render artifacts before promoting a card. Use the
+[verified HTTPS readback](release-verification.md#verify-the-served-recipe)
+for the direct HTTP observation.
 
 Test the deployment at three independent layers:
 
