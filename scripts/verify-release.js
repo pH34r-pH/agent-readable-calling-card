@@ -84,7 +84,7 @@ function checkFreshness(entry, issuedAt, now) {
   );
 }
 
-function verifyRelease(root, trustedKey, expectedRevision, now = Date.now()) {
+function verifyRelease(root, trustedKey, expectedRevision, now = Date.now(), includeLayoutEvidence = false) {
   requireCondition(typeof expectedRevision === "string" && REVISION.test(expectedRevision), "Expected a full reviewed Git revision");
   requireCondition(Number.isFinite(now), "Expected a verification time");
   requireCondition(trustedKey.type === "public" && trustedKey.asymmetricKeyType === "ed25519", "Expected a trusted Ed25519 public key");
@@ -161,16 +161,29 @@ function verifyRelease(root, trustedKey, expectedRevision, now = Date.now()) {
       readBundleFile(root, "card.png", PNG_LIMIT).equals(rendered.png),
     "Release artifacts did not reproduce"
   );
-  return { sourceRevision: expectedRevision, manifestSha256: sha256(manifestBytes) };
+  const receipt = { sourceRevision: expectedRevision, manifestSha256: sha256(manifestBytes) };
+  if (includeLayoutEvidence) {
+    receipt.layoutEvidence = {
+      transformation: "layout-reconstruction",
+      result: "byte-match",
+      verifiedAt: new Date(now).toISOString(),
+      renderManifestSha256: manifest.renderManifestSha256
+    };
+  }
+  return receipt;
 }
 
 if (require.main === module) {
   try {
     const args = process.argv.slice(2);
-    requireCondition(args.length === 3, "Usage: node scripts/verify-release.js bundle-dir trusted-public-key.pem reviewed-git-sha");
-    const [root, keyPath, expectedRevision] = args;
+    const [root, keyPath, expectedRevision, option] = args;
+    const includeLayoutEvidence = option === "--layout-evidence";
+    requireCondition(
+      args.length === 3 || (args.length === 4 && includeLayoutEvidence),
+      "Usage: node scripts/verify-release.js bundle-dir trusted-public-key.pem reviewed-git-sha [--layout-evidence]"
+    );
     const key = crypto.createPublicKey(readLocalFile(keyPath, 4096));
-    const result = verifyRelease(root, key, expectedRevision);
+    const result = verifyRelease(root, key, expectedRevision, Date.now(), includeLayoutEvidence);
     console.log(JSON.stringify(result));
   } catch (error) {
     console.error("Release verification failed:", error.message);
