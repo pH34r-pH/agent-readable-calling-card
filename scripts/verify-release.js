@@ -55,6 +55,19 @@ function parseJSON(bytes) {
   }
 }
 
+function parseCanonicalJSON(bytes, label) {
+  const value = parseJSON(bytes);
+  requireCondition(
+    bytes.equals(canonicalJSON(value)),
+    label + " must use the canonical JSON encoding"
+  );
+  return value;
+}
+
+function canonicalJSON(value) {
+  return Buffer.from(JSON.stringify(value, null, 2) + "\n");
+}
+
 function isCanonicalHttps(value) {
   return isHttpsUrl(value) && new URL(value).href === value;
 }
@@ -84,35 +97,12 @@ function checkFreshness(entry, issuedAt, now) {
   );
 }
 
-function verifyRelease(root, trustedKey, expectedRevision, now = Date.now(), includeLayoutEvidence = false) {
+function checkReleaseEvidence(manifest, expectedRevision, now) {
   requireCondition(typeof expectedRevision === "string" && REVISION.test(expectedRevision), "Expected a full reviewed Git revision");
   requireCondition(Number.isFinite(now), "Expected a verification time");
-  requireCondition(trustedKey.type === "public" && trustedKey.asymmetricKeyType === "ed25519", "Expected a trusted Ed25519 public key");
-  requireCondition(fs.lstatSync(root).isDirectory(), "Release root must be an ordinary directory");
-  const manifestBytes = readBundleFile(root, "release.json", MANIFEST_LIMIT);
-  const signature = readBundleFile(root, "release.sig", 64);
-  requireCondition(
-    signature.length === 64 && crypto.verify(null, manifestBytes, trustedKey, signature),
-    "Release signature is invalid"
-  );
-  const manifest = parseJSON(manifestBytes);
-  requireCondition(
-    manifestBytes.equals(Buffer.from(JSON.stringify(manifest, null, 2) + "\n")),
-    "Release manifest must use the canonical JSON encoding"
-  );
-  checkFields(manifest, [
-    "schemaVersion", "sourceRevision", "issuedAt", "expiresAt", "recipe", "sources",
-    "renderManifestSha256", "transformations"
-  ], "Release manifest");
-  requireCondition(manifest.schemaVersion === 1, "Unsupported release manifest version");
   requireCondition(manifest.sourceRevision === expectedRevision, "Release source revision does not match");
   const issuedAt = timestamp(manifest.issuedAt);
   requireCondition(issuedAt <= now && now < timestamp(manifest.expiresAt), "Release is outside its validity window");
-  requireCondition(
-    Array.isArray(manifest.transformations) && manifest.transformations.length === TRANSFORMATIONS.length &&
-      TRANSFORMATIONS.every((step, index) => step === manifest.transformations[index]),
-    "Unsupported or misordered release transformation"
-  );
 
   const recipe = manifest.recipe;
   checkFields(recipe, ["url", "redirectTarget", "sha256", "observedAt", "freshUntil"], "Recipe");
@@ -138,23 +128,63 @@ function verifyRelease(root, trustedKey, expectedRevision, now = Date.now(), inc
     sourceNames.add(source.file);
     sourceUrls.add(source.url);
   }
-  checkInventory(root, sourceNames.size ? [...FIXED_FILES, "sources"] : FIXED_FILES);
-  if (sourceNames.size) checkInventory(path.join(root, "sources"), [...sourceNames].map(name => path.basename(name)));
-  for (const source of manifest.sources) {
-    checkDigest(readBundleFile(root, source.file, TEXT_LIMIT), source.sha256, "Source snapshot");
+  return sourceNames;
+}
+
+function readReviewedSnapshots(root, fixedFiles, manifest, sourceNames) {
+  checkInventory(root, sourceNames.size ? [...fixedFiles, "sources"] : fixedFiles);
+  if (sourceNames.size) {
+    checkInventory(path.join(root, "sources"), [...sourceNames].map(name => path.basename(name)));
   }
-  checkDigest(readBundleFile(root, "card.md", TEXT_LIMIT), recipe.sha256, "Recipe snapshot");
-  const recordedRender = readBundleFile(root, "card.manifest.json", MANIFEST_LIMIT);
-  checkDigest(recordedRender, manifest.renderManifestSha256, "Render manifest");
-  const configLabel = parseJSON(recordedRender)?.configuration?.file;
+  const snapshots = new Map();
+  for (const source of manifest.sources) {
+    const bytes = readBundleFile(root, source.file, TEXT_LIMIT);
+    checkDigest(bytes, source.sha256, "Source snapshot");
+    snapshots.set(source.file, bytes);
+  }
+  const recipe = readBundleFile(root, "card.md", TEXT_LIMIT);
+  checkDigest(recipe, manifest.recipe.sha256, "Recipe snapshot");
+  snapshots.set("card.md", recipe);
+  return snapshots;
+}
+
+function checkConfigLabel(configLabel) {
   requireCondition(
     typeof configLabel === "string" && /^(?:[a-z0-9._-]+\/)*[a-z0-9._-]+$/iu.test(configLabel) &&
       configLabel.length <= 256 && !configLabel.split("/").some(segment => segment === "." || segment === ".."),
     "Invalid render configuration provenance path"
   );
+}
+
+function verifyRelease(root, trustedKey, expectedRevision, now = Date.now(), includeLayoutEvidence = false) {
+  requireCondition(trustedKey.type === "public" && trustedKey.asymmetricKeyType === "ed25519", "Expected a trusted Ed25519 public key");
+  requireCondition(fs.lstatSync(root).isDirectory(), "Release root must be an ordinary directory");
+  const manifestBytes = readBundleFile(root, "release.json", MANIFEST_LIMIT);
+  const signature = readBundleFile(root, "release.sig", 64);
+  requireCondition(
+    signature.length === 64 && crypto.verify(null, manifestBytes, trustedKey, signature),
+    "Release signature is invalid"
+  );
+  const manifest = parseCanonicalJSON(manifestBytes, "Release manifest");
+  checkFields(manifest, [
+    "schemaVersion", "sourceRevision", "issuedAt", "expiresAt", "recipe", "sources",
+    "renderManifestSha256", "transformations"
+  ], "Release manifest");
+  requireCondition(manifest.schemaVersion === 1, "Unsupported release manifest version");
+  requireCondition(
+    Array.isArray(manifest.transformations) && manifest.transformations.length === TRANSFORMATIONS.length &&
+      TRANSFORMATIONS.every((step, index) => step === manifest.transformations[index]),
+    "Unsupported or misordered release transformation"
+  );
+  const sourceNames = checkReleaseEvidence(manifest, expectedRevision, now);
+  readReviewedSnapshots(root, FIXED_FILES, manifest, sourceNames);
+  const recordedRender = readBundleFile(root, "card.manifest.json", MANIFEST_LIMIT);
+  checkDigest(recordedRender, manifest.renderManifestSha256, "Render manifest");
+  const configLabel = parseJSON(recordedRender)?.configuration?.file;
+  checkConfigLabel(configLabel);
   const config = readBundleFile(root, "card.json", MAX_CONFIG_BYTES);
   const rendered = renderCard(config, configLabel);
-  requireCondition(rendered.recipeUrl === recipe.url, "Card and release refer to different recipes");
+  requireCondition(rendered.recipeUrl === manifest.recipe.url, "Card and release refer to different recipes");
   requireCondition(rendered.manifest.equals(recordedRender), "Render manifest did not reproduce");
   requireCondition(
     readBundleFile(root, "card.svg", TEXT_LIMIT).equals(Buffer.from(rendered.svg)) &&
@@ -191,4 +221,8 @@ if (require.main === module) {
   }
 }
 
-module.exports = { verifyRelease };
+module.exports = {
+  verifyRelease, canonicalJSON, checkConfigLabel, checkDigest, checkFields, checkReleaseEvidence,
+  parseCanonicalJSON, readBundleFile, readReviewedSnapshots, requireCondition, MANIFEST_LIMIT,
+  TEXT_LIMIT, PNG_LIMIT, TRANSFORMATIONS
+};

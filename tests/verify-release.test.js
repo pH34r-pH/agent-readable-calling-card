@@ -7,6 +7,7 @@ const test = require("node:test");
 const { spawnSync } = require("node:child_process");
 
 const { renderCard, sha256 } = require("../scripts/render-card.js");
+const { stageRelease } = require("../scripts/stage-release.js");
 const { verifyRelease } = require("../scripts/verify-release.js");
 
 const REVISION = "a".repeat(40);
@@ -177,4 +178,106 @@ test("staged bytes and renderer metadata cannot be replaced after admission", as
   write("card.manifest.json", substituted);
   sign();
   assert.throws(() => verifyRelease(root, publicKey, REVISION, NOW), /Render manifest did not reproduce/);
+});
+
+function reviewedInputs(t) {
+  const { directory, root, manifest } = stagedRelease(t);
+  const inputs = path.join(directory, "reviewed");
+  const destination = path.join(directory, "unsigned");
+  fs.mkdirSync(path.join(inputs, "sources"), { recursive: true });
+  for (const name of ["card.json", "card.md", "sources/example.md"]) {
+    fs.copyFileSync(path.join(root, name), path.join(inputs, name));
+  }
+  const { renderManifestSha256: _render, transformations: _steps, ...reviewed } = manifest;
+  const plan = { ...reviewed, configuration: { file: "card.json", sha256: sha256(config) } };
+  function writePlan() {
+    const bytes = Buffer.from(JSON.stringify(plan, null, 2) + "\n");
+    fs.writeFileSync(path.join(inputs, "stage-plan.json"), bytes);
+    return sha256(bytes);
+  }
+  return { inputs, destination, plan, writePlan };
+}
+
+test("a staged bundle reproduces byte for byte and passes the existing verifier after signing", t => {
+  const { inputs, destination, writePlan } = reviewedInputs(t);
+  const pin = writePlan();
+  const receipt = stageRelease(inputs, pin, REVISION, destination, NOW);
+  assert.deepEqual(fs.readdirSync(destination).sort(), [
+    "card.json", "card.manifest.json", "card.md", "card.png", "card.svg", "release.json", "sources"
+  ]);
+  const second = destination + "-repeat";
+  assert.deepEqual(stageRelease(inputs, pin, REVISION, second, NOW), receipt);
+  for (const name of [
+    "card.json", "card.manifest.json", "card.md", "card.png", "card.svg",
+    "release.json", "sources/example.md"
+  ]) {
+    assert.deepEqual(fs.readFileSync(path.join(second, name)), fs.readFileSync(path.join(destination, name)));
+  }
+  const manifest = fs.readFileSync(path.join(destination, "release.json"));
+  assert.deepEqual(receipt, {
+    sourceRevision: REVISION, planSha256: pin, manifestSha256: sha256(manifest), status: "prepared-unsigned"
+  });
+  fs.writeFileSync(path.join(destination, "release.sig"), crypto.sign(null, manifest, privateKey));
+  assert.deepEqual(verifyRelease(destination, publicKey, REVISION, NOW), {
+    sourceRevision: REVISION, manifestSha256: receipt.manifestSha256
+  });
+});
+
+test("staging rejects changed or invalid reviewed inputs before creating a bundle", async t => {
+  for (const [description, change, expected] of [
+    ["wrong plan pin", f => { f.writePlan(); return "b".repeat(64); }, /Reviewed staging plan digest/],
+    ["stale observation", f => { f.plan.recipe.freshUntil = OBSERVED; return f.writePlan(); }, /freshness/],
+    ["different source revision", f => { f.plan.sourceRevision = "b".repeat(40); return f.writePlan(); }, /source revision/],
+    ["changed configuration", f => {
+      const pin = f.writePlan();
+      fs.writeFileSync(path.join(f.inputs, "card.json"), "{}");
+      return pin;
+    }, /Card configuration digest/],
+    ["changed recipe", f => {
+      const pin = f.writePlan();
+      fs.writeFileSync(path.join(f.inputs, "card.md"), "Other reviewed text");
+      return pin;
+    }, /Recipe snapshot digest/],
+    ["unreviewed source", f => {
+      const pin = f.writePlan();
+      fs.writeFileSync(path.join(f.inputs, "sources/extra.txt"), "Extra text");
+      return pin;
+    }, /unadmitted files/],
+    ["different recipe URL", f => {
+      f.plan.recipe.url = "https://example.org/alternate.md";
+      return f.writePlan();
+    }, /different recipes/]
+  ]) {
+    await t.test(description, child => {
+      const fixture = reviewedInputs(child);
+      const pin = change(fixture);
+      assert.throws(() => stageRelease(fixture.inputs, pin, REVISION, fixture.destination, NOW), expected);
+      assert.equal(fs.existsSync(fixture.destination), false);
+    });
+  }
+});
+
+test("staging preserves an existing destination and can retry after an interrupted write", t => {
+  const { inputs, destination, writePlan } = reviewedInputs(t);
+  const pin = writePlan();
+  const existing = destination + "-existing";
+  fs.mkdirSync(existing);
+  fs.writeFileSync(path.join(existing, "keep.txt"), "Existing bundle");
+  assert.throws(() => stageRelease(inputs, pin, REVISION, existing, NOW), /EEXIST/);
+  assert.deepEqual(fs.readdirSync(existing), ["keep.txt"]);
+  assert.equal(fs.readFileSync(path.join(existing, "keep.txt"), "utf8"), "Existing bundle");
+
+  const write = fs.writeFileSync;
+  let writes = 0;
+  try {
+    fs.writeFileSync = (...args) => {
+      if (typeof args[0] === "number" && ++writes === 3) throw new Error("Synthetic write failure");
+      return write(...args);
+    };
+    assert.throws(() => stageRelease(inputs, pin, REVISION, destination, NOW), /Synthetic write failure/);
+  } finally {
+    fs.writeFileSync = write;
+  }
+  assert.equal(fs.existsSync(destination), false);
+  assert.equal(stageRelease(inputs, pin, REVISION, destination, NOW).status, "prepared-unsigned");
 });
