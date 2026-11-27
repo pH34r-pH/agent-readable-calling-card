@@ -1,25 +1,49 @@
 # Verified ARCC release bundles
 
-Keep each card release in a dedicated staging directory. Use a clean checkout of the
-reviewed Git revision, the locked Node dependencies, and the existing canonical
-renderer. Stage the reviewed configuration as `card.json` and the exact recipe bytes
-as `card.md`. The renderer produces `card.svg`, `card.png`, and `card.manifest.json`.
-Render from the reviewed checkout so the manifest records a relative configuration
-path. Copy the same configuration bytes into the release bundle.
+Keep each card release in a dedicated staging directory. Use a clean checkout of
+the reviewed Git revision and install the locked Node dependencies with `npm ci`.
+Retain the approved configuration as `card.json` and the exact recipe bytes as
+`card.md` in a separate reviewed input directory.
 
 When a recipe cites sources reviewed for the release, retain the exact public
 snapshots as `sources/<name>.md` or `sources/<name>.txt`. A reviewer checks which original
 URLs are authoritative, which bytes were retrieved, the observed recipe redirect,
 the time of each observation, and when each observation needs refresh. Keep the
-staging directory read-only to other processes during verification and promotion.
-The verifier reads staged files only and treats recipe and source text as data.
+reviewed input and staging directories read-only to other processes. The stage
+and verification commands use local files and treat recipe and source text as data.
 Publication approval comes from the protected release process.
+
+## Stage the reviewed inputs
+
+Write `stage-plan.json` in the reviewed input directory. Use UTF-8 JSON with two
+spaces of indentation and a final LF. Include `schemaVersion`,
+`sourceRevision`, `issuedAt`, `expiresAt`, `recipe`, and `sources` as described
+below. Add a `configuration` object with `file` and `sha256`. The file label is
+the relative path to the configuration in the reviewed source, using forward
+slashes. Its digest binds the exact staged `card.json` bytes.
+
+Obtain the SHA-256 of the reviewed plan and full Git revision independently.
+Choose a new bundle directory under an existing staging parent.
+
+```sh
+node scripts/stage-release.js "$ARCC_REVIEWED_INPUTS" "$ARCC_REVIEWED_PLAN_SHA" \
+  "$ARCC_REVIEWED_SHA" "$ARCC_BUNDLE"
+```
+
+The command checks the tracked checkout, plan, source and recipe bytes before
+creating the bundle. The approved `card.json` must also match the configuration
+file in the reviewed Git revision. It generates `card.svg`, `card.png`, and
+`card.manifest.json` with the existing renderer. It writes `release.json`
+last and emits a `prepared-unsigned` receipt that binds the plan and release
+manifest. The plan stays with the reviewed inputs. The signature is added
+separately by the approved signer.
 
 ## Release manifest version 1
 
-Write `release.json` as UTF-8 JSON with two spaces of indentation and a final LF.
-Hash exact file bytes with SHA-256 and use lowercase hexadecimal. Record timestamps
-in UTC with millisecond precision. The root record has these fields.
+The stager writes `release.json` as UTF-8 JSON with two spaces of indentation
+and a final LF. Use lowercase hexadecimal SHA-256 values over exact bytes.
+Record timestamps in UTC with millisecond precision. The root record has these
+fields.
 
 | Field | Required value |
 | --- | --- |
