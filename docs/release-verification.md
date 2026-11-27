@@ -60,21 +60,36 @@ A passing command prints the reviewed source SHA and signed manifest digest. It
 checks the sealed file inventory and current validity, then rebuilds the SVG and PNG
 using the pinned renderer and fonts. Publish only the exact bundle associated with
 the receipt. Check the live HTTPS content type, redirect and recipe bytes in the
-protected promotion step. The repository's current Pages configuration publishes
-from `main`. The owner must move card publication behind an approved verification
-step before using that source branch for a signed release.
+protected promotion step. Pages is configured for workflow publication. A signed
+card release requires an approved workflow that verifies the staged bundle before
+publication.
 
 ## Transformation evidence
 
-| Transformation | What the result may claim | Required evidence |
+| Transformation | Evaluator and decision | Required evidence |
 | --- | --- | --- |
-| Pixel recovery | Text recovered from the image pixels | Exact image digest, transformation and reader versions, recovered spans compared with the labeled reference, and recorded misses |
-| Web resolution | The recipe or link resolved through a particular retrieval path | Recovered URL, observed redirect and media type, exact returned digest, observation time, and the browser or assistant retrieval surface |
-| Layout reconstruction | An SVG or raster representation reproduced from admitted design inputs | Configuration and output digests, renderer and font identities, and a byte comparison after rebuilding |
-| Factual synthesis | Statements grounded in public sources | Statement-level source and excerpt references, snapshot digests, freshness, and a reviewer checking attribution and unsupported claims |
-| Model-assisted generation | Model-generated output or interpretation | Model and evaluation identities, exact input and output digests, separation of quoted source support from generation, and a fidelity assessment |
+| Pixel recovery | A reviewer compares the reader's image-only result with labeled reference spans. Score exact matches, substitutions, and misses for each image variant. | Exact image digest, transformation parameters and version, reader identity and version, labeled spans, and raw recovered spans |
+| Web resolution | An observer exercises one named retrieval surface and checks successful resolution against the expected destination, inline text response, and exact recipe bytes. Score each surface independently. | Requested URL, observed redirect, status, media type and disposition, exact response digest where bytes are available, observation time, and the retrieval surface and version |
+| Layout reconstruction | The release verifier rebuilds the SVG and PNG with the pinned renderer and compares both files byte for byte. | Signed release digest, verified render manifest digest, configuration and output digests, and renderer and font identities from the render manifest |
+| Factual synthesis | A reviewer checks each factual statement against a cited excerpt from a current, admitted source. Record unsupported, stale, or misattributed statements. | Each statement and its finding, exact source URL and excerpt, snapshot digest, observation time and freshness, and reviewer identity |
+| Model-assisted generation | An evaluator identified separately from the generating model checks fidelity to the specified task and identifies which passages are quotes, paraphrases, or generated material. | Model and evaluator identities, exact input and output digests, task or rubric version, source excerpts for attributed material, and the fidelity findings |
 
-Version 1 verifies the deterministic layout and raster steps. The same bundle can
-carry independently reviewed recipe and source observations. Record pixel
-readability and assistant retrieval trials separately under
-[the interoperability test profile](../tests/interoperability.md).
+Record a result, evaluator identity, evaluation time, and retained evidence for each
+trial. Use an inconclusive result when required observations are missing. For
+example, a surface that cannot expose response bytes can record a retrieval
+observation with the digest unavailable. An exact byte match requires response bytes.
+An output can have several evidence records. A passing observation applies only
+to its own transformation and exact inputs. See the
+[interoperability test profile](../tests/interoperability.md) for the trial setup.
+
+To retain layout-reconstruction evidence, run the release check with the optional flag.
+
+```sh
+node scripts/verify-release.js "$ARCC_BUNDLE" "$ARCC_TRUSTED_PUBLIC_KEY" "$ARCC_REVIEWED_SHA" --layout-evidence
+```
+
+The JSON receipt includes a `layoutEvidence` record with the verification time,
+the `byte-match` result, and the SHA-256 digest of the rebuilt render manifest.
+Retain the receipt alongside the signed release and its `card.manifest.json`, which
+contains the exact configuration, output, renderer, and font identities. Keep live
+retrieval observations and reviewer assessments linked to their own inputs.

@@ -75,7 +75,7 @@ test("verified release reproduces both render artifacts and commits exact recipe
   assert.equal(verifyRelease(root, publicKey, REVISION, NOW).sourceRevision, REVISION);
 });
 
-test("CLI verifies with the independently supplied key and reports a release digest", t => {
+test("CLI reports the release digest and can record byte-for-byte layout evidence", t => {
   const { directory, root, manifest, sign } = stagedRelease(t);
   const current = Date.now();
   manifest.issuedAt = new Date(current - 60_000).toISOString();
@@ -91,6 +91,29 @@ test("CLI verifies with the independently supplied key and reports a release dig
   const result = spawnSync(process.execPath, [verifier, root, keyPath, REVISION], { encoding: "utf8" });
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(JSON.parse(result.stdout), { sourceRevision: REVISION, manifestSha256: sha256(signed) });
+
+  const evidence = spawnSync(process.execPath, [verifier, root, keyPath, REVISION, "--layout-evidence"], {
+    encoding: "utf8"
+  });
+  assert.equal(evidence.status, 0, evidence.stderr);
+  const receipt = JSON.parse(evidence.stdout);
+  assert.equal(receipt.sourceRevision, REVISION);
+  assert.equal(receipt.manifestSha256, sha256(signed));
+  assert.ok(Date.parse(receipt.layoutEvidence.verifiedAt) >= current);
+  assert.deepEqual(receipt.layoutEvidence, {
+    transformation: "layout-reconstruction",
+    result: "byte-match",
+    verifiedAt: receipt.layoutEvidence.verifiedAt,
+    renderManifestSha256: sha256(render.manifest)
+  });
+
+  const wrongRevision = "b".repeat(40);
+  const rejected = spawnSync(process.execPath, [verifier, root, keyPath, wrongRevision, "--layout-evidence"], {
+    encoding: "utf8"
+  });
+  assert.equal(rejected.status, 1);
+  assert.match(rejected.stderr, /source revision does not match/);
+  assert.equal(rejected.stdout, "");
 });
 
 test("manifest substitution, unexpected signing key and wrong deployment revision are rejected", t => {

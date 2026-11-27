@@ -116,6 +116,12 @@ Retain:
 - transformation parameters;
 - scored level and failure notes.
 
+Record evidence for the specific transformation being assessed using the
+[transformation evidence matrix](../docs/release-verification.md#transformation-evidence).
+For example, an L1 pixel result and an L2 Web result have separate inputs and
+observations. An L4 result cites the observations repeated on the transformed
+image or its downstream outputs.
+
 The first useful result is not "ARCC works." It is a map of which visual encodings survive which transformations for which classes of multimodal assistant, plus which Web serving/discovery configurations those assistants can actually resolve.
 
 ## First field evidence (October 2026)
