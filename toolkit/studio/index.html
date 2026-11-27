@@ -406,6 +406,7 @@
     const file = event.target.files && event.target.files[0];
     if (!file) return;
     try {
+      if (file.size > ARCC.MAX_CONFIG_BYTES) throw new Error("Config exceeds 32 KiB.");
       const loaded = JSON.parse(await file.text());
       const result = ARCC.validateConfig(loaded);
       if (!result.valid) throw new Error(result.errors.join(" · "));
