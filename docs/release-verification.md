@@ -83,10 +83,31 @@ node scripts/verify-release.js "$ARCC_BUNDLE" "$ARCC_TRUSTED_PUBLIC_KEY" "$ARCC_
 A passing command prints the reviewed source SHA and signed manifest digest. It
 checks the sealed file inventory and current validity, then rebuilds the SVG and PNG
 using the pinned renderer and fonts. Publish only the exact bundle associated with
-the receipt. Check the live HTTPS content type, redirect and recipe bytes in the
-protected promotion step. Pages is configured for workflow publication. A signed
+the receipt. Complete the [HTTPS readback](#verify-the-served-recipe) during
+protected promotion. Pages is configured for workflow publication. A signed
 card release requires an approved workflow that verifies the staged bundle before
 publication.
+
+## Verify the served recipe
+
+Obtain the approved release manifest digest and HTTPS deployment origin
+independently of the bundle. Use the origin form `https://example.org`.
+After the release operator deploys the candidate, run the readback against
+the exact signed bundle.
+
+```sh
+node scripts/verify-web-release.js "$ARCC_BUNDLE" "$ARCC_TRUSTED_PUBLIC_KEY" \
+  "$ARCC_REVIEWED_SHA" "$ARCC_APPROVED_MANIFEST_SHA" "$ARCC_DEPLOYMENT_ORIGIN"
+```
+
+The command first verifies the signature, local renderer, reviewed
+revision, manifest digest and freshness. It requests the canonical recipe
+and follows a single same-origin redirect only when the signed release
+lists that destination. A passing response is HTTP 200 with inline UTF-8
+text and the exact signed recipe digest. Retain the JSON receipt
+with the private promotion evidence. Record the browser and assistant
+observations separately using the
+[interoperability plan](../tests/interoperability.md).
 
 ## Transformation evidence
 
