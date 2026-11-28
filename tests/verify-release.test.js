@@ -10,6 +10,7 @@ const { renderCard, sha256 } = require("../scripts/render-card.js");
 const { stageRelease } = require("../scripts/stage-release.js");
 const { verifyRelease } = require("../scripts/verify-release.js");
 const { verifyWebRelease } = require("../scripts/verify-web-release.js");
+const { verifyWebCard } = require("../scripts/verify-web-card.js");
 
 const REVISION = "a".repeat(40);
 const NOW = Date.parse("2026-11-25T20:00:00.000Z");
@@ -75,6 +76,52 @@ test("verified release reproduces both render artifacts and commits exact recipe
   manifest.recipe.redirectTarget = "https://example.org/canonical/card.md";
   sign();
   assert.equal(verifyRelease(root, publicKey, REVISION, NOW).sourceRevision, REVISION);
+});
+
+test("published card readback binds an independently approved HTTPS URL to the signed render", async t => {
+  const { root, sign } = stagedRelease(t);
+  const approved = sha256(sign());
+  const image = fs.readFileSync(path.join(root, "card.png"));
+  const url = "https://example.org/card.png";
+  const request = async (observed, options) => {
+    assert.equal(observed, url);
+    assert.equal(options.redirect, "manual");
+    assert.equal(options.credentials, "omit");
+    return new Response(image, { headers: { "Content-Type": "image/png" } });
+  };
+  const result = await verifyWebCard(root, publicKey, REVISION, approved, url, { request, clock: () => NOW });
+  assert.equal(result.cardEvidence.sha256, sha256(image));
+  assert.equal(result.cardEvidence.bytes, image.length);
+  assert.equal(result.cardEvidence.cardUrl, url);
+  for (const [badUrl, digest] of [["http://example.org/card.png", approved], [url, "0".repeat(64)]]) {
+    await assert.rejects(verifyWebCard(root, publicKey, REVISION, digest, badUrl, {
+      clock: () => NOW, request: async () => assert.fail("invalid authority must not fetch")
+    }));
+  }
+  for (const [response, error] of [
+    [new Response(null, { status: 302, headers: { location: "/other.png" } }), /without redirect/],
+    [new Response(image, { headers: { "Content-Type": "text/html" } }), /image\/png/],
+    [new Response(Buffer.from("substituted"), { headers: { "Content-Type": "image/png" } }), /digest does not match/]
+  ]) {
+    await assert.rejects(verifyWebCard(root, publicKey, REVISION, approved, url, {
+      clock: () => NOW, request: async () => response
+    }), error);
+  }
+  let chunks = 0;
+  const oversized = new ReadableStream({
+    pull(controller) {
+      if (chunks++ < 69) controller.enqueue(new Uint8Array(1024 * 1024));
+      else controller.close();
+    }
+  });
+  await assert.rejects(verifyWebCard(root, publicKey, REVISION, approved, url, {
+    clock: () => NOW,
+    request: async () => new Response(oversized, { headers: { "Content-Type": "image/png" } })
+  }), /exceeds its size limit/);
+  const times = [NOW, Date.parse("2026-11-26T12:00:00.000Z")];
+  await assert.rejects(verifyWebCard(root, publicKey, REVISION, approved, url, {
+    clock: () => times.shift(), request
+  }), /validity window/);
 });
 
 test("Web verification observes only the pinned recipe and records exact inline text", async t => {

@@ -109,6 +109,22 @@ with the private promotion evidence. Record the browser and assistant
 observations separately using the
 [interoperability plan](../tests/interoperability.md).
 
+## Verify the served card image
+
+Obtain the exact canonical HTTPS image URL independently as part of the
+approved promotion. Against the same signed bundle and approved digest, run:
+
+```sh
+node scripts/verify-web-card.js "$ARCC_BUNDLE" "$ARCC_TRUSTED_PUBLIC_KEY" \
+  "$ARCC_REVIEWED_SHA" "$ARCC_APPROVED_MANIFEST_SHA" "$ARCC_APPROVED_CARD_URL"
+```
+
+The command requires a direct HTTP 200 `image/png` response without redirects,
+limits the response size, and compares its SHA-256 with the PNG identity in
+the signed render manifest. Retain its JSON receipt with the promotion evidence.
+This establishes the observed image bytes at that URL, not browser rendering,
+assistant readability, source truth, or authorization to publish.
+
 ## Transformation evidence
 
 | Transformation | Evaluator and decision | Required evidence |
